@@ -20,12 +20,18 @@ public final class Config {
     private Config() {}
 
     // ------------------------------------------------------------------ projection (2.5D iso)
-    /** Vertical compression of the ground plane on screen (iso look). */
-    public static final float RHO          = 0.62f;
+    /**
+     * Vertical squash of the ground plane, measured from the shipped block
+     * art (top-face diamond height / width per sprite: 0.49-0.66,
+     * classic 2:1 iso). 0.50 keeps every landing point ON the art's top
+     * face; the old 0.62 overshot the face tips, sinking the piece
+     * "into" the box on edge landings.
+     */
+    public static final float RHO          = 0.50f;
     /** Screen rise factor for height above the plane (jumps). */
     public static final float RISE_K       = 0.80f;
     /** Px per world unit: fraction of the view WIDTH (fallback). */
-    public static final float SCALE_W      = 0.145f;
+    public static final float SCALE_W      = 0.152f;
     /** Px per world unit: never more than this fraction of view HEIGHT. */
     public static final float SCALE_H_CAP  = 0.068f;
     /** Screen row (0..1) where the camera focus is centered. */
@@ -36,13 +42,15 @@ public final class Config {
     public static final float CAM_LERP_RATE = 7.0f;
 
     // ------------------------------------------------------------------ lanes
-    /** Angle of the lane off the straight-ahead axis (degrees).
-     *  ~25 deg reads as ~38 deg on screen (RHO compresses z) like the
-     *  official game's up-left / up-right jumps. */
-    public static final float LANE_ANGLE_BASE   = 25f;
-    public static final float LANE_ANGLE_JITTER = 6f;
+    /**
+     * Angle of the lane off the straight-ahead axis (degrees). The
+     * on-screen lane angle is atan(tan(a)/RHO): 18 deg reads as ~33
+     * deg with RHO 0.50, the official game's up-left / up-right line.
+     */
+    public static final float LANE_ANGLE_BASE   = 18f;
+    public static final float LANE_ANGLE_JITTER = 5f;
     /** Cosine of the base lane angle (footprint widths -> lane distance). */
-    public static final float LANE_COS = (float) Math.cos(Math.toRadians(25f));
+    public static final float LANE_COS = (float) Math.cos(Math.toRadians(LANE_ANGLE_BASE));
     /** Direction switches only every RUN_LEN_MIN..RUN_LEN_MAX blocks. */
     public static final int   RUN_LEN_MIN = 3;
     public static final int   RUN_LEN_MAX = 6;
@@ -131,22 +139,30 @@ public final class Config {
      * on every direction switch, and the colors glide over ~1 s.
      * Each row is {topR,topG,topB, bottomR,bottomG,bottomB} in 0..1.
      */
+    /**
+     * Warm light background gradients, one per "phase"; the phase
+     * advances on every direction switch (level switch) and the colors
+     * glide over ~1 s. Hues are distinct enough to read as a scenery
+     * change but all stay light and warm like the original: cream /
+     * rose / butter / sage / apricot / warm lilac. Each row is
+     * {topRGB, bottomRGB} in 0..1.
+     */
     public static final float[][] BG_PHASES = {
-            {0.980f, 0.953f, 0.890f,  0.992f, 0.980f, 0.941f},  // cream
-            {0.980f, 0.914f, 0.878f,  0.992f, 0.969f, 0.933f},  // blush
-            {0.976f, 0.941f, 0.843f,  0.992f, 0.984f, 0.941f},  // butter
-            {0.945f, 0.941f, 0.867f,  0.976f, 0.973f, 0.925f},  // sage
-            {0.984f, 0.914f, 0.859f,  0.992f, 0.969f, 0.941f},  // peach
-            {0.953f, 0.949f, 0.902f,  0.973f,  0.973f, 0.949f}, // warm grey
+            {0.984f, 0.968f, 0.910f,  0.996f, 0.988f, 0.957f},  // cream
+            {0.988f, 0.930f, 0.905f,  0.996f, 0.973f, 0.952f},  // rose blush
+            {0.984f, 0.965f, 0.835f,  0.996f, 0.988f, 0.933f},  // butter yellow
+            {0.936f, 0.953f, 0.875f,  0.975f, 0.984f, 0.939f},  // sage green
+            {0.985f, 0.935f, 0.862f,  0.996f, 0.975f, 0.943f},  // apricot peach
+            {0.952f, 0.929f, 0.933f,  0.980f, 0.973f, 0.976f},  // warm lilac
     };
     /** Background glide speed (exponential, per second). */
-    public static final float BG_LERP_RATE = 2.2f;
+    public static final float BG_LERP_RATE = 2.8f;
 
     /** Ink for the big score / combo text (warm charcoal). */
     public static final float[] SCORE_INK = {0.29f, 0.26f, 0.22f};   // #4A4238
     /** Perfect-zone marker drawn at the center of the TARGET block. */
-    public static final float[] MARKER_INK = {0.38f, 0.33f, 0.28f};
-    public static final float MARKER_ALPHA = 0.36f;
+    public static final float[] MARKER_INK = {0.33f, 0.28f, 0.22f};
+    public static final float MARKER_ALPHA = 0.55f;
     /** Piece blob shadow tint (RGB) + base alpha. */
     public static final float[] SHADOW_RGB  = {0.28f, 0.25f, 0.30f};
     public static final float SHADOW_ALPHA  = 0.30f;
@@ -168,4 +184,26 @@ public final class Config {
     public static final int   DUST_PERFECT  = 9;
     public static final int   SPARK_PERFECT = 6;
     public static final int   DUST_SPECIAL  = 12;
+    // ------------------------------------------------------------------ charge absorb + flight trail
+    /** Charge dots per second sucked into the piece: ramps with power. */
+    public static final float ABSORB_RATE_MIN = 6f;
+    public static final float ABSORB_RATE_MAX = 32f;
+    /** Spawn ring radius (world units) around the piece. */
+    public static final float ABSORB_R_MIN    = 0.65f;
+    public static final float ABSORB_R_MAX    = 1.35f;
+    /** Exponential homing rate toward the piece body. */
+    public static final float ABSORB_HOMING   = 4.5f;
+    /** Max charge-dot life (s). */
+    public static final float ABSORB_T_MAX    = 1.4f;
+    public static final int   ABSORB_CAP      = 42;
+
+    /** Flight trail: one fading puff every TRAIL_PERIOD seconds. */
+    public static final float TRAIL_PERIOD    = 0.03f;
+    public static final float TRAIL_T         = 0.50f;
+    /** Puff radius (world units) from fresh to expired. */
+    public static final float TRAIL_R0        = 0.085f;
+    public static final float TRAIL_R1        = 0.030f;
+    public static final float TRAIL_ALPHA     = 0.55f;
+    /** Puff height above the piece's feet (mid-body). */
+    public static final float TRAIL_Y_OFF     = 0.55f;
 }

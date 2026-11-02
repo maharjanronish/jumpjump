@@ -29,8 +29,11 @@ import javax.microedition.khronos.opengles.GL10;
  *    chain reveals progressively (only ~3 blocks ever exist on screen)
  *  - the lane runs 3-6 blocks one way, then switches; each switch glides
  *    the background to the next warm tint
- *  - the current block squashes down together with the piece while charging
- *  - a small ring marks the perfect (dead-center) zone on the target
+ *  - the current block squashes down together with the piece while charging,
+ *    and ivory dots get sucked into the piece (charge absorb)
+ *  - the flight leaves a fading trail of soft puffs behind the piece
+ *  - a bold ring marks the perfect (dead-center) zone on the target, drawn
+ *    with each art's own top-face squash so it reads perfectly concentric
  *  - landing bursts of world-space particles; no big flash effects
  *
  * Frame budget on a 2015-class phone: ~20 draw calls, ~40 quads, 60 fps.
@@ -78,9 +81,20 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private static final class Particle {
         float x, y, z, vx, vy, vz, age, size; boolean gold;
     }
+    /** Charge dot spiraling INTO the piece while holding (absorbed). */
+    private static final class Absorb {
+        float x, y, z, age;
+    }
+    /** One fading puff of the flight trail behind the piece. */
+    private static final class TrailDot {
+        float x, y, z, age;
+    }
     private final List<Popup> popups = new ArrayList<>(8);
     private final List<Ring> rings = new ArrayList<>(4);
     private final List<Particle> particles = new ArrayList<>(48);
+    private final List<Absorb> absorbs = new ArrayList<>(32);
+    private final List<TrailDot> trail = new ArrayList<>(64);
+    private float absorbClock, trailClock;
     private final Random fxRandom = new Random();
     private final ShaderUtil.DynBuf dynBuf = new ShaderUtil.DynBuf();
     private final int[] tmpIds = new int[1];
@@ -112,6 +126,10 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         popups.clear();
         rings.clear();
         particles.clear();
+        absorbs.clear();
+        trail.clear();
+        absorbClock = 0;
+        trailClock = 0;
         bgPhaseSeen = -1;
         lastFrameNanos = System.nanoTime();
     }
@@ -151,6 +169,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         game.update(dt);
         handleEvents();
         updateEffects(dt);
+        updateChargeAndTrail(dt);
         updateBackground(dt);
         camera.update(game, camera.viewW(), camera.viewH(), dt);
 
@@ -159,6 +178,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
         drawBackground();
         drawWorld();
+        drawChargeAndTrail();
         drawParticles();
         drawText();
     }
@@ -263,6 +283,120 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         }
     }
 
+    // ---------------------------------------------------------------- charge absorb + flight trail
+
+    /**
+     * While CHARGING, ivory dots spawn in a ring around the piece and get
+     * sucked into its body (rate ramps with power, like the original).
+     * While FLYING, the piece drops a fading trail of soft puffs.
+     */
+    private void updateChargeAndTrail(float dt) {
+        Piece p = game.piece();
+
+        // ---- charge absorb dots
+        if (game.state() == Game.State.CHARGING) {
+            float power = game.power();
+            float rate = Config.ABSORB_RATE_MIN
+                    + (Config.ABSORB_RATE_MAX - Config.ABSORB_RATE_MIN) * power;
+            absorbClock += dt * rate;
+            while (absorbClock >= 1f) {
+                absorbClock -= 1f;
+                if (absorbs.size() >= Config.ABSORB_CAP) { absorbClock = 0; break; }
+                Absorb a = new Absorb();
+                double ang = fxRandom.nextDouble() * Math.PI * 2;
+                float r = Config.ABSORB_R_MIN
+                        + fxRandom.nextFloat() * (Config.ABSORB_R_MAX - Config.ABSORB_R_MIN);
+                a.x = p.pos.x + (float) Math.cos(ang) * r;
+                a.z = p.pos.z + (float) Math.sin(ang) * r;
+                a.y = 0.03f + fxRandom.nextFloat() * 0.45f;
+                a.age = 0;
+                absorbs.add(a);
+            }
+        } else {
+            absorbClock = 0;
+        }
+        // home every dot into the piece's body; absorb on arrival
+        float tx = p.pos.x, tz = p.pos.z;
+        float ty = 0.62f * p.squashY + 0.08f;
+        float k = 1f - (float) Math.exp(-Config.ABSORB_HOMING * dt * (0.6f + game.power()));
+        for (int i = absorbs.size() - 1; i >= 0; i--) {
+            Absorb a = absorbs.get(i);
+            a.age += dt;
+            a.x += (tx - a.x) * k;
+            a.y += (ty - a.y) * k;
+            a.z += (tz - a.z) * k;
+            float dx = a.x - tx, dy = a.y - ty, dz = a.z - tz;
+            if (a.age > Config.ABSORB_T_MAX || dx * dx + dy * dy + dz * dz < 0.005f) {
+                absorbs.remove(i);
+            }
+        }
+
+        // ---- flight trail puffs
+        if (game.state() == Game.State.FLYING) {
+            trailClock += dt;
+            while (trailClock >= Config.TRAIL_PERIOD) {
+                trailClock -= Config.TRAIL_PERIOD;
+                if (trail.size() >= 96) break;
+                TrailDot t = new TrailDot();
+                t.x = p.pos.x;
+                t.y = p.pos.y + Config.TRAIL_Y_OFF;
+                t.z = p.pos.z;
+                t.age = 0;
+                trail.add(t);
+            }
+        } else {
+            trailClock = 0;
+        }
+        for (int i = trail.size() - 1; i >= 0; i--) {
+            trail.get(i).age += dt;
+            if (trail.get(i).age > Config.TRAIL_T) trail.remove(i);
+        }
+    }
+
+    /** Draws the flight trail puffs and charge absorb dots (soft discs). */
+    private void drawChargeAndTrail() {
+        if (absorbs.isEmpty() && trail.isEmpty()) return;
+        GLES20.glUseProgram(texProg.id);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, sprites.softDiscTex);
+        GLES20.glUniform1i(texProg.uTex, 0);
+        FloatBuffer b = dynBuf.get((trail.size() + absorbs.size()) * 48);
+        int quads = 0;
+        // trail: round white puffs, shrinking + fading with age
+        for (TrailDot t : trail) {
+            float k2 = t.age / Config.TRAIL_T;
+            float r = Config.TRAIL_R0 + (Config.TRAIL_R1 - Config.TRAIL_R0) * k2;
+            float alpha = Config.TRAIL_ALPHA * (1f - k2) * Math.min(1f, t.age / 0.06f);
+            quads += emitSoftDisc(b, t.x, t.y, t.z, r, 1f, 0.99f, 0.96f, alpha);
+        }
+        // charge dots: ivory, fade in fast
+        for (Absorb a : absorbs) {
+            float fadeIn = Math.min(1f, a.age / 0.12f);
+            quads += emitSoftDisc(b, a.x, a.y, a.z, 0.052f, 1f, 0.99f, 0.95f, 0.75f * fadeIn);
+        }
+        if (quads == 0) return;
+        b.flip();
+        uploadAndDrawTex(b, quads * 6);
+    }
+
+    /** One soft-disc quad (world point + radius, round on screen). Returns verts. */
+    private int emitSoftDisc(FloatBuffer buf, float x, float y, float z, float rWorld,
+                             float r, float g, float b, float a) {
+        if (a <= 0.02f) return 0;
+        float cx = camera.screenX(x, z);
+        float cy = camera.screenY(x, z, y);
+        float w = camera.spanX(rWorld) * 2f;
+        float x0 = camera.ndcX(cx - w * 0.5f), x1 = camera.ndcX(cx + w * 0.5f);
+        float y0 = camera.ndcY(cy - w * 0.5f), y1 = camera.ndcY(cy + w * 0.5f);
+        buf.put(x0); buf.put(y0); buf.put(0); buf.put(0); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        buf.put(x1); buf.put(y0); buf.put(1); buf.put(0); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        buf.put(x1); buf.put(y1); buf.put(1); buf.put(1); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        buf.put(x0); buf.put(y0); buf.put(0); buf.put(0); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        buf.put(x1); buf.put(y1); buf.put(1); buf.put(1); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        buf.put(x0); buf.put(y1); buf.put(0); buf.put(1); buf.put(r); buf.put(g); buf.put(b); buf.put(a);
+        return 6;
+    }
+
     // ---------------------------------------------------------------- background
 
     /** Glides the warm gradient toward the current phase's tint. */
@@ -331,12 +465,21 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             curDipPx = (h - topCy) * (1f - curQ);
         }
 
+        // the block the piece is standing on must never be drawn over the
+        // piece (far-half landings otherwise sink the piece "into" the box)
+        Blocks.Block nextB = game.next();
+        Blocks.Block standing = null;
+        if (!p.dead) {
+            if (cur != null && cur.contains(p.pos.x, p.pos.z, 0.35f)) standing = cur;
+            else if (nextB != null && nextB.contains(p.pos.x, p.pos.z, 0.35f)) standing = nextB;
+        }
+
         // painter's algorithm: far blocks first (z desc); the piece sits in
         // front of the block it stands on and behind strictly nearer blocks
         boolean pieceDrawn = false;
         for (int i = vis.size() - 1; i >= 0; i--) {
             Blocks.Block blk = vis.get(i);
-            if (!pieceDrawn && blk.center.z < p.pos.z - 1e-4f) {
+            if (!pieceDrawn && blk != standing && blk.center.z < p.pos.z - 1e-4f) {
                 drawPieceAndShadow(curDipPx);
                 pieceDrawn = true;
             }
@@ -419,22 +562,28 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     }
 
     /**
-     * Perfect-zone marker: a thin pulsing ellipse ring + dot at the TARGET's
+     * Perfect-zone marker: a bold pulsing ellipse ring + dot at the TARGET's
      * top-face center, exactly the radius that scores the 2/4/6... combo.
+     * The ellipse uses THIS art's own top-face squash so the ring reads
+     * concentric with the drawn face on every block style.
      */
     private void drawMarker(Blocks.Block blk) {
+        Sprites.BlockSprite s = sprites.blocks[Sprites.idOf(blk.kind, blk.style)];
+        if (s.tex < 0) return;
         float pr = game.targetPerfectR();
         float cx = camera.screenX(blk.center.x, blk.center.z);
         float cy = camera.screenY(blk.center.x, blk.center.z) - camera.rise(dropOf(blk));
-        float pulse = 0.80f + 0.20f * (float) Math.sin(game.totalTime() * 5.5f);
+        float pulse = 0.82f + 0.18f * (float) Math.sin(game.totalTime() * 5.5f);
         float[] ink = Config.MARKER_INK;
-        drawAnnulus(cx, cy, camera.spanX(pr) * 1.12f, camera.spanY(pr) * 1.12f,
-                Math.max(2.5f, camera.spanX(pr) * 0.10f),
+        float rx = camera.spanX(pr) * 1.25f;
+        float ry = rx * s.squash;
+        drawAnnulus(cx, cy, rx, ry,
+                Math.max(3f, rx * 0.13f),
                 ink[0], ink[1], ink[2], Config.MARKER_ALPHA * pulse);
         // center dot via the soft disc, tinted
-        float dotR = Math.max(3f, camera.spanX(pr) * 0.16f);
-        drawTexQuad(sprites.softDiscTex, cx - dotR, cy - dotR * Config.RHO, dotR * 2, dotR * 2 * Config.RHO,
-                ink[0], ink[1], ink[2], Config.MARKER_ALPHA * 1.15f * pulse);
+        float dotR = Math.max(4f, rx * 0.20f);
+        drawTexQuad(sprites.softDiscTex, cx - dotR, cy - dotR * s.squash, dotR * 2, dotR * 2 * s.squash,
+                ink[0], ink[1], ink[2], Math.min(1f, Config.MARKER_ALPHA * 1.3f) * pulse);
     }
 
     /** Current drop-in height of a spawning block (world units). */

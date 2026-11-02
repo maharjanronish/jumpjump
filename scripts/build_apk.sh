@@ -34,8 +34,8 @@ if [ -z "$BT" ] || [ -z "$PLATFORM" ]; then
   exit 1
 fi
 
-VERSION_CODE="${VERSION_CODE:-5}"
-VERSION_NAME="${VERSION_NAME:-2.0.0}"
+VERSION_CODE="${VERSION_CODE:-6}"
+VERSION_NAME="${VERSION_NAME:-2.1.0}"
 OUT="$PROJECT/build"
 rm -rf "$OUT"
 mkdir -p "$OUT/classes" "$OUT/gen" "$OUT/dex"

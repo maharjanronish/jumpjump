@@ -38,6 +38,8 @@ final class Sprites {
         int w, h;
         /** Pixel row of the top-face (landing) center, from the sprite top. */
         float topCy;
+        /** Top-face diamond height / width of THIS art (marker concentric). */
+        float squash;
     }
 
     /** Asset files in fixed order; index = sprite id. */
@@ -58,6 +60,14 @@ final class Sprites {
     private static final float[] TOP_CY = {
             84.05f, 69.39f, 62.42f, 63.53f, 64.90f,
             62.71f, 67.62f, 64.70f, 72.00f, 60.13f,
+    };
+
+    /** Measured top-face squash (diamond height / width) of each art:
+     *  2 * (topCy - apex) / maxOpaqueWidth. Used so the perfect-zone ring
+     *  renders concentric with each art's own face shape. */
+    private static final float[] TOP_SQUASH = {
+            0.662f, 0.564f, 0.499f, 0.513f, 0.542f,
+            0.498f, 0.518f, 0.555f, 0.590f, 0.486f,
     };
 
     /** Sprite id for a block kind + style. */
@@ -85,6 +95,7 @@ final class Sprites {
                 s.w = bmp.getWidth();
                 s.h = bmp.getHeight();
                 s.topCy = TOP_CY[i] * (s.w / 256f);
+                s.squash = TOP_SQUASH[i];
                 s.tex = uploadStraight(bmp);
                 bmp.recycle();
             }

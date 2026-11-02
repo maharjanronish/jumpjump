@@ -26,11 +26,12 @@ Every rule of the original is replicated:
 | Record player (music box) | stay ~2 s → melody plays → **+30** |
 | Direction runs | the chain runs 3-6 blocks one way, then **switches like a level switch**; the background glides to the next warm tint on every switch |
 | Fixed top-view camera | the camera never rotates — it pans smoothly with you, exactly like the official composition |
-| Perfect-zone marker | a small pulsing ring marks the dead-center zone on the target block |
+| Perfect-zone marker | a bold pulsing ring + dot at the dead-center zone of the target block, drawn concentric with each art's own top face |
 | Block variety | 5 plain platform styles (stone, grass, wood, dark, face tile) + cylinders + 4 special kiosks — pre-rendered isometric sprites |
 | Drop-in targets | the new target block drops in from above right after each landing |
 | Landing particles | ivory dust bursts that bounce; **gold sparks** on dead-center hits (no big flash effects) |
-| Charge feedback | the block **squashes together with the character** while charging |
+| Charge feedback | the block **squashes together with the character** while charging, and ivory **absorb dots** get sucked into the piece |
+| Flight trail | the jump leaves a fading trail of soft puffs behind the character |
 | Difficulty ramp | blocks shrink and gaps widen as your score climbs |
 | Round blocks | cylinders appear (and get more common) as you progress |
 | Adjustment hops | tiny taps hop within the same block, exactly like the original |
@@ -44,7 +45,7 @@ No online anything: no accounts, no ads, no tracking, **no permissions**.
 
 ## Performance by design
 
-- **APK: ~164 KB** (the original WeChat mini-game was ~4 MB; typical Unity clone ≥ 30 MB) — 104 KB of that is the 10 platform sprites
+- **APK: ~168 KB** (the original WeChat mini-game was ~4 MB; typical Unity clone ≥ 30 MB) — 104 KB of that is the 10 platform sprites
 - **RAM: ~25–35 MB** PSS (GL context + ~400 KB of synthesized audio + ~2.6 MB of sprite textures)
 - **~20 draw calls / ~40 quads per frame**, no depth buffer, 60 fps on 2015-era hardware
 - Render loop pauses automatically on the game-over screen (battery friendly)
@@ -53,6 +54,28 @@ No online anything: no accounts, no ads, no tracking, **no permissions**.
   font is rendered at runtime
 
 ## Changelog
+
+**2.1.0** — the "feel & polish" update:
+
+- **Fixed the center circle & "sinking into the box"**: the ground squash
+  is now measured from the shipped art (RHO 0.62 → 0.50, classic 2:1 iso —
+  a more top-down camera like the original). Landings near an edge used to
+  overshoot the art's face tips, sinking the piece into the box; now every
+  landing point stays on the platform, and the painter's order never draws
+  the standing block over the piece.
+- **Bold concentric marker**: the perfect-zone ring is bigger, bolder
+  (alpha 0.36 → 0.55) and uses each sprite's own top-face squash, so it
+  reads perfectly centered on every block style.
+- **Charge absorb**: ivory dots spawn in a ring around the piece while
+  holding and get sucked into its body — rate ramps with power, exactly
+  like the original's charge feel.
+- **Flight trail**: every jump leaves a fading trail of soft white puffs
+  behind the character.
+- **Distinct warm backgrounds**: the palette glides through cream → rose →
+  butter → sage → apricot → warm lilac on every direction switch — clearly
+  visible scenery changes, still light and warm.
+- **Lane retuned** for the new squash (18° world = ~33° on screen), scale
+  up 5% so blocks sit a touch larger on screen.
 
 **1.3.0** — the "official look & feel" update:
 
