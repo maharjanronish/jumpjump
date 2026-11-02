@@ -48,39 +48,93 @@ public class LogicTest {
 
     // ---------------------------------------------------------------- camera
 
+    static final int CAM_W = 1080, CAM_H = 2340;
+
     static void testCameraComposition() {
         System.out.println("[camera composition]");
         Game g = new Game(42);
         Camera cam = new Camera();
-        float aspect = 0.46f; // portrait phone
-        cam.update(g, aspect);
+        cam.update(g, CAM_W, CAM_H, 0f);
 
-        // typical gap: current block low-left, next block up and to the right
+        // current block low-center, next block clearly higher up-screen
         Vec3 cur = g.cur().center;
         Vec3 nxt = g.next().center;
-        float cx = cam.screenX(cur.x, 0, cur.z), cy = cam.screenY(cur.x, 0, cur.z);
-        float nx = cam.screenX(nxt.x, 0, nxt.z), ny = cam.screenY(nxt.x, 0, nxt.z);
-        check("current block in the lower-left area", cx > 0.10f && cx < 0.50f && cy > 0.58f && cy < 0.92f,
-                String.format("cur=(%.2f, %.2f)", cx, cy));
-        check("next block is up and to the right of the current one",
-                nx > cx + 0.08f && ny < cy - 0.06f && nx < 1.00f && ny > 0.00f,
+        float cx = cam.screenX(cur.x, cur.z) / CAM_W, cy = cam.screenY(cur.x, cur.z) / CAM_H;
+        float nx = cam.screenX(nxt.x, nxt.z) / CAM_W, ny = cam.screenY(nxt.x, nxt.z) / CAM_H;
+        check("current block sits in the lower half of the screen",
+                cy > 0.50f && cy < 0.80f, String.format("cur=(%.2f, %.2f)", cx, cy));
+        check("next block is clearly higher on screen than the current one",
+                ny < cy - 0.08f && ny > 0.12f && ny < 0.60f,
                 String.format("next=(%.2f, %.2f) cur=(%.2f, %.2f)", nx, ny, cx, cy));
+        check("both blocks horizontally centered enough to read the layout",
+                cx > 0.15f && cx < 0.85f && nx > 0.15f && nx < 0.85f,
+                String.format("cx=%.2f nx=%.2f", cx, nx));
+        float bw = 2 * g.cur().halfW * cam.scale();
+        check("early block spans 36-58% of the screen width",
+                bw > 0.36f * CAM_W && bw < 0.58f * CAM_W, "bw=" + bw);
+        check("progressive reveal: only a small window of blocks exists",
+                g.visible().size() <= Config.KEEP_BEHIND + Config.KEEP_AHEAD + 1,
+                "visible=" + g.visible().size());
 
-        // worst case: maximum distance -> the whole next block stays on screen
+        // direction RUNS like the original: the target stays on ONE screen
+        // side for several jumps, then the lane switches (a "level switch");
+        // both directions occur, but never alternating every single block
+        boolean sawRight = false, sawLeft = false;
+        int runLen = 1, maxRun = 0, minRun = Integer.MAX_VALUE, switches = 0;
+        float lastSide = 0;
+        for (int i = 0; i < 80; i++) {
+            cam.update(g, CAM_W, CAM_H, 1f / 60f);
+            Vec3 c2 = g.cur().center, n2 = g.next().center;
+            float side = Math.signum(cam.screenX(n2.x, n2.z) - cam.screenX(c2.x, c2.z));
+            if (side != 0 && lastSide != 0 && side != lastSide) {
+                switches++;
+                maxRun = Math.max(maxRun, runLen);
+                minRun = Math.min(minRun, runLen);
+                runLen = 1;
+            } else if (side != 0) {
+                runLen++;
+            }
+            if (side > 0) sawRight = true;
+            if (side < 0) sawLeft = true;
+            lastSide = side;
+            botJump(g);
+        }
+        check("the lane runs BOTH directions over time (right and left)",
+                sawRight && sawLeft, "right=" + sawRight + " left=" + sawLeft);
+        check("direction switches are occasional: every block is NOT a zigzag",
+                maxRun >= 3 && minRun >= 2 && switches >= 3,
+                "switches=" + switches + " maxRun=" + maxRun + " minRun=" + minRun);
+        check("no run lasts longer than the configured maximum",
+                maxRun <= Config.RUN_LEN_MAX + 1, "maxRun=" + maxRun);
+        // background phase follows the switches
+        check("background phase advances with the direction switches",
+                g.blocksPhase() >= 1, "phase=" + g.blocksPhase());
+
+        // worst case over a long random run: the whole next block stays
+        // on screen (the camera's lateral guard), edges included
         Game g2 = new Game(7);
-        for (int i = 0; i < 150; i++) botJump(g2);
-        cam.update(g2, aspect);
-        Vec3 n2 = g2.next().center;
-        float half = g2.next().halfW;
-        float edgeA = cam.screenX(n2.x - Config.U_X * half, 0, n2.z - Config.U_Z * half);
-        float edgeB = cam.screenX(n2.x + Config.U_X * half, 0, n2.z + Config.U_Z * half);
-        float ny2 = cam.screenY(n2.x, 0, n2.z);
-        check("max-distance next block fully visible",
-                edgeA > -0.02f && edgeA < 1.02f && edgeB > -0.02f && edgeB < 1.02f
-                        && ny2 > 0.05f && ny2 < 0.60f,
-                String.format("edges=%.2f/%.2f ny=%.2f", edgeA, edgeB, ny2));
-        check("diagonal direction is up-right on screen",
-                Config.U_X < 0 && Config.U_Z > 0, "");
+        float worstA = 1f, worstB = -1f, worstNy = 0f, bestNy = 1f;
+        for (int i = 0; i < 150; i++) {
+            // converged camera (many real frames elapse per bot jump)
+            cam.update(g2, CAM_W, CAM_H, 1.0f);
+            Vec3 n3 = g2.next().center;
+            float half = g2.next().halfW;
+            // farthest sprite corner horizontally = center +/- halfW along x
+            float edgeA = cam.screenX(n3.x - half, n3.z) / CAM_W;
+            float edgeB = cam.screenX(n3.x + half, n3.z) / CAM_W;
+            worstA = Math.min(worstA, Math.min(edgeA, edgeB));
+            worstB = Math.max(worstB, Math.max(edgeA, edgeB));
+            float nyFrac = cam.screenY(n3.x, n3.z) / CAM_H;
+            worstNy = Math.max(worstNy, nyFrac);
+            bestNy = Math.min(bestNy, nyFrac);
+            botJump(g2);
+        }
+        check("max-distance next block fully visible horizontally",
+                worstA > -0.02f && worstB < 1.02f,
+                String.format("edges=%.2f/%.2f", worstA, worstB));
+        check("next block always sits in the vertical sweet spot",
+                worstNy > 0.05f && worstNy < 0.72f && bestNy > 0.18f,
+                String.format("ny=%.2f..%.2f", bestNy, worstNy));
     }
 
     // ---------------------------------------------------------------- clearability
@@ -146,7 +200,11 @@ public class LogicTest {
         for (GameEvent e : ev) if (e.type == GameEvent.Type.PERFECT) gained = e.intArg;
         check("combo capped at 32 points per jump", gained == 32, "gained=" + gained);
 
-        // a normal landing resets the streak (tested on early, wide blocks)
+        // a normal landing resets the streak (tested on early, wide blocks).
+        // NOTE: after a non-perfect landing the piece sits off the lane center,
+        // so the very next jump cannot be perfect (lateral carry-over, as in
+        // the original); within a few jumps the lane rotates back and the
+        // next perfect must start from 2 again.
         Game g2 = new Game(23);
         botJump(g2);                     // perfect, combo = 1
         g2.drainEvents();
@@ -156,10 +214,11 @@ public class LogicTest {
         boolean hadPerfect2 = false;
         for (GameEvent e : ev2) if (e.type == GameEvent.Type.PERFECT) hadPerfect2 = true;
         check("slightly-off landing is not scored as perfect", !hadPerfect2, "");
-        botJump(g2);                     // perfect again
-        List<GameEvent> ev3 = g2.drainEvents();
         int again = 0;
-        for (GameEvent e : ev3) if (e.type == GameEvent.Type.PERFECT) again = e.intArg;
+        for (int tries = 0; tries < 4 && again == 0; tries++) {
+            List<GameEvent> evT = playPerfect(g2);
+            for (GameEvent e : evT) if (e.type == GameEvent.Type.PERFECT) again = e.intArg;
+        }
         check("after a miss-of-center, next perfect starts back at 2", again == 2, "again=" + again);
     }
 
@@ -195,7 +254,7 @@ public class LogicTest {
         // undershoot: scan hold times until one lands in the gap between blocks
         Game g2 = new Game(9);
         boolean fellShort = false;
-        for (float hold = 0.16f; hold < 0.34f; hold += 0.01f) {
+        for (float hold = 0.16f; hold < 0.42f; hold += 0.01f) {
             Game t = new Game(9);
             t.press(); pump(t, hold); t.release(); pump(t, 3f);
             for (GameEvent e : t.drainEvents()) {
@@ -213,7 +272,7 @@ public class LogicTest {
         float per = g3.perfectHoldTime();
         // walk the hold time up until we fall off the far edge
         boolean edgeFound = false;
-        for (float extra = 0.10f; extra < 0.35f; extra += 0.02f) {
+        for (float extra = 0.10f; extra < 0.50f; extra += 0.02f) {
             Game t = new Game(9);
             t.press(); pump(t, per + extra); t.release(); pump(t, 3f);
             for (GameEvent e : t.drainEvents()) {

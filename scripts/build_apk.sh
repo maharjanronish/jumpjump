@@ -34,8 +34,8 @@ if [ -z "$BT" ] || [ -z "$PLATFORM" ]; then
   exit 1
 fi
 
-VERSION_CODE="${VERSION_CODE:-2}"
-VERSION_NAME="${VERSION_NAME:-1.1.0}"
+VERSION_CODE="${VERSION_CODE:-5}"
+VERSION_NAME="${VERSION_NAME:-2.0.0}"
 OUT="$PROJECT/build"
 rm -rf "$OUT"
 mkdir -p "$OUT/classes" "$OUT/gen" "$OUT/dex"
@@ -49,6 +49,7 @@ echo "[2/6] linking resources (aapt2)"
   -I "$PLATFORM" \
   --java "$OUT/gen" \
   --min-sdk-version 21 \
+  -A app/src/main/assets \
   --target-sdk-version 34 \
   --version-code "$VERSION_CODE" \
   --version-name "$VERSION_NAME" \

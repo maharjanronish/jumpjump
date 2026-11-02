@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#F8F5FA</color>
-    <color name="ink">#56504A</color>
-    <color name="ink_soft">#8A8595</color>
+    <color name="bg">#FAF5EC</color>
+    <color name="ink">#4A4238</color>
+    <color name="ink_soft">#9A8F80</color>
 </resources>

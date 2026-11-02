@@ -27,10 +27,5 @@ public final class Vec3 {
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    /** Signed offset of this point along the progression axis from origin. */
-    public float alongU(Vec3 origin) {
-        return (x - origin.x) * Config.U_X + (z - origin.z) * Config.U_Z;
-    }
-
     @Override public String toString() { return "(" + x + ", " + y + ", " + z + ")"; }
 }

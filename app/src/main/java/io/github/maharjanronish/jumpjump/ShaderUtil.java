@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
-/** Shader compilation + the four tiny programs used by the renderer. */
+/** Shader compilation + the three tiny programs used by the sprite renderer. */
 public final class ShaderUtil {
 
     private ShaderUtil() {}
@@ -38,49 +38,30 @@ public final class ShaderUtil {
 
     // ---------------------------------------------------------------- programs
 
-    /** Lit geometry: blocks, piece, decorations. */
-    static final class MeshProgram {
+    /**
+     * Textured screen-space quads (block sprites, piece, shadow): NDC
+     * position + UV + per-vertex RGBA tint. The texture holds STRAIGHT
+     * alpha (uploaded via glTexImage2D from getPixels), blending is the
+     * standard (SRC_ALPHA, ONE_MINUS_SRC_ALPHA) set globally.
+     */
+    static final class TexProgram {
         final int id = link(
-                "attribute vec3 aPos; attribute vec3 aNormal;"
-                + "uniform mat4 uMVP; uniform mat4 uM;"
-                + "varying vec3 vN; varying vec3 vWorld;"
-                + "void main(){"
-                + "  gl_Position = uMVP * vec4(aPos, 1.0);"
-                + "  vN = mat3(uM[0].xyz, uM[1].xyz, uM[2].xyz) * aNormal;"
-                + "  vWorld = (uM * vec4(aPos, 1.0)).xyz;"
-                + "}",
+                "attribute vec2 aPos; attribute vec2 aUV; attribute vec4 aColor;"
+                + "varying vec2 vUV; varying vec4 vColor;"
+                + "void main(){ gl_Position = vec4(aPos, 0.0, 1.0); vUV = aUV; vColor = aColor; }",
                 "precision mediump float;"
-                + "uniform vec4 uColor; uniform vec3 uLight;"
-                + "varying vec3 vN; varying vec3 vWorld;"
+                + "uniform sampler2D uTex; varying vec2 vUV; varying vec4 vColor;"
                 + "void main(){"
-                + "  vec3 n = normalize(vN);"
-                + "  float d = max(dot(n, uLight), 0.0);"
-                + "  float f = max(dot(n, normalize(vec3(0.55, 0.2, 0.35))), 0.0) * 0.18;"
-                + "  float grad = clamp((vWorld.y + 2.6) / 3.2, 0.0, 1.0);"
-                + "  vec3 c = uColor.rgb * (0.55 + 0.45 * d + f) * (0.88 + 0.12 * grad);"
-                + "  gl_FragColor = vec4(c, uColor.a);"
+                + "  vec4 t = texture2D(uTex, vUV);"
+                + "  gl_FragColor = vec4(t.rgb * vColor.rgb, t.a * vColor.a);"
                 + "}");
         final int aPos = GLES20.glGetAttribLocation(id, "aPos");
-        final int aNormal = GLES20.glGetAttribLocation(id, "aNormal");
-        final int uMVP = GLES20.glGetUniformLocation(id, "uMVP");
-        final int uM = GLES20.glGetUniformLocation(id, "uM");
-        final int uColor = GLES20.glGetUniformLocation(id, "uColor");
-        final int uLight = GLES20.glGetUniformLocation(id, "uLight");
+        final int aUV = GLES20.glGetAttribLocation(id, "aUV");
+        final int aColor = GLES20.glGetAttribLocation(id, "aColor");
+        final int uTex = GLES20.glGetUniformLocation(id, "uTex");
     }
 
-    /** Unlit world-space triangles with per-draw color (shadows, gauges, rings). */
-    static final class Flat3DProgram {
-        final int id = link(
-                "attribute vec3 aPos; uniform mat4 uMVP;"
-                + "void main(){ gl_Position = uMVP * vec4(aPos, 1.0); }",
-                "precision mediump float; uniform vec4 uColor;"
-                + "void main(){ gl_FragColor = uColor; }");
-        final int aPos = GLES20.glGetAttribLocation(id, "aPos");
-        final int uMVP = GLES20.glGetUniformLocation(id, "uMVP");
-        final int uColor = GLES20.glGetUniformLocation(id, "uColor");
-    }
-
-    /** Screen-space triangles with per-vertex color (background, dust). */
+    /** Screen-space triangles with per-vertex color (background, dust, rings). */
     static final class SpriteProgram {
         final int id = link(
                 "attribute vec2 aPos; attribute vec4 aColor; varying vec4 vColor;"
@@ -104,10 +85,9 @@ public final class ShaderUtil {
         final int uTex = GLES20.glGetUniformLocation(id, "uTex");
     }
 
-    /** Small dynamic vertex buffer helper (positions+colors / positions+uv). */
+    /** Small dynamic vertex buffer helper (positions+colors / pos+uv+color). */
     static final class DynBuf {
         private FloatBuffer buf;
-        private float[] tmp = new float[64];
 
         FloatBuffer get(int floats) {
             int bytes = floats * 4;
@@ -117,11 +97,6 @@ public final class ShaderUtil {
             }
             buf.clear();
             return buf;
-        }
-
-        void put(FloatBuffer b, float... v) {
-            if (v.length > tmp.length) tmp = new float[v.length];
-            b.put(v, 0, v.length);
         }
     }
 }

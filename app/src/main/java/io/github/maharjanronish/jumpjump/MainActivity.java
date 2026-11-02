@@ -51,7 +51,7 @@ public final class MainActivity extends Activity implements GameRenderer.Ui {
         sfx.setSoundOn(storage.soundOn());
 
         game = new Game(seedRandom.nextLong());
-        renderer = new GameRenderer(game, sfx, this);
+        renderer = new GameRenderer(this, game, sfx, this);
         gameView = new GameView(this, renderer);
         FrameLayout container = findViewById(R.id.gl_container);
         container.addView(gameView, 0);

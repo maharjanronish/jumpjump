@@ -31,5 +31,5 @@ public final class Piece {
     }
 
     /** Center of the head (world) - used for popups anchoring. */
-    public float headY() { return pos.y + Config.PIECE_HEIGHT * squashY; }
+    public float headY() { return pos.y + Config.PIECE_H_UNITS * squashY; }
 }

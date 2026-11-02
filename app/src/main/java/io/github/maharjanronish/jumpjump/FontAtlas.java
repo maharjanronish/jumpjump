@@ -3,6 +3,7 @@ package io.github.maharjanronish.jumpjump;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 
@@ -11,23 +12,34 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
 /**
- * Runtime-generated bitmap font for digits and '+' - zero asset files.
- * White glyphs, tinted per draw call (score ink, ivory popups, gold bonuses).
+ * Runtime-generated bitmap font - zero asset files. Glyphs are drawn white on
+ * a transparent ARGB_8888 strip and uploaded as GL_RGBA (broad driver support;
+ * some GPUs mishandle ALPHA_8 uploads). Each draw call tints via uColor.
+ *
+ * Two instances are used: a light typeface for the big score (the elegant,
+ * thin look of the original) and a medium one for popups.
  */
 public final class FontAtlas {
 
-    public static final String GLYPHS = "0123456789+";
+    public static final String GLYPHS = "0123456789+x";
+
+    private final String family;
+    private final int style;
 
     private int texture = -1;
     private final float[] uvs = new float[GLYPHS.length() * 4]; // u0,v0,u1,v1
     private final float[] widths = new float[GLYPHS.length()];
     private float rowH;
 
+    public FontAtlas(String family, int style) {
+        this.family = family;
+        this.style = style;
+    }
+
     public void create() {
         int size = 128;
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setTypeface(android.graphics.Typeface.create(
-                android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD));
+        paint.setTypeface(Typeface.create(family, style));
         paint.setTextSize(size * 0.72f);
         paint.setColor(0xFFFFFFFF);
 
@@ -40,9 +52,9 @@ public final class FontAtlas {
         }
         rowH = size;
 
-        // lay out on one horizontal strip
+        // lay out on one horizontal strip (transparent background, white glyphs)
         int stripW = (int) Math.ceil(maxW * GLYPHS.length()) + GLYPHS.length() * 8;
-        Bitmap bmp = Bitmap.createBitmap(stripW, size, Bitmap.Config.ALPHA_8);
+        Bitmap bmp = Bitmap.createBitmap(stripW, size, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(bmp);
         c.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
         Paint.FontMetrics fm = paint.getFontMetrics();
@@ -67,7 +79,7 @@ public final class FontAtlas {
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_ALPHA, bmp, 0);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, bmp, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         bmp.recycle();
     }
