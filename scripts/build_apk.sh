@@ -6,7 +6,9 @@
 # Requirements:
 #   ANDROID_HOME  - Android SDK (default: local sandbox path)
 #   JAVA_HOME     - JDK 17+ with javac (default: local sandbox path)
-#   JUMP_KEYSTORE - optional signing keystore path (created if missing)
+#      JUMP_KEYSTORE - optional signing keystore path (defaults to the
+#                      committed signing.keystore so every build - local or
+#                      CI - produces an APK with the SAME signature)
 # ---------------------------------------------------------------------------
 set -euo pipefail
 
@@ -32,8 +34,8 @@ if [ -z "$BT" ] || [ -z "$PLATFORM" ]; then
   exit 1
 fi
 
-VERSION_CODE="${VERSION_CODE:-1}"
-VERSION_NAME="${VERSION_NAME:-1.0.0}"
+VERSION_CODE="${VERSION_CODE:-2}"
+VERSION_NAME="${VERSION_NAME:-1.1.0}"
 OUT="$PROJECT/build"
 rm -rf "$OUT"
 mkdir -p "$OUT/classes" "$OUT/gen" "$OUT/dex"

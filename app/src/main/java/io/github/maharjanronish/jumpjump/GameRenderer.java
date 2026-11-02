@@ -78,6 +78,9 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     private long lastFrameNanos;
     private boolean firstJumpSeen;
 
+    /** Persistent VBO for screen-space quads (background / dust / text). */
+    private int dynVbo = -1;
+
     public GameRenderer(Game game, Sfx sfx, Ui ui) {
         this.game = game;
         this.sfx = sfx;
@@ -117,6 +120,21 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         sphere = Meshes.sphere(10, 14);
         disc = Meshes.disc(22);
         ring = Meshes.ring(26);
+
+        // IMPORTANT: upload every mesh to the GPU now - Mesh.draw() only works
+        // after its VBO exists (a mesh with vbo == -1 draws nothing).
+        cube.upload();
+        cylPiece.upload();
+        cylBlock.upload();
+        cylHorn.upload();
+        sphere.upload();
+        disc.upload();
+        ring.upload();
+
+        // one persistent dynamic VBO, reused every frame (no per-frame
+        // buffer create/delete churn, and no stale attrib pointers)
+        GLES20.glGenBuffers(1, tmpIds, 0);
+        dynVbo = tmpIds[0];
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         GLES20.glDepthFunc(GLES20.GL_LEQUAL);
@@ -263,8 +281,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
     }
 
     private void uploadAndDrawSprites(FloatBuffer b, int verts) {
-        GLES20.glGenBuffers(1, tmpIds, 0);
-        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, tmpIds[0]);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, dynVbo);
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, verts * 24, b, GLES20.GL_DYNAMIC_DRAW);
         GLES20.glEnableVertexAttribArray(spriteProg.aPos);
         GLES20.glVertexAttribPointer(spriteProg.aPos, 2, GLES20.GL_FLOAT, false, 24, 0);
@@ -272,8 +289,8 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glVertexAttribPointer(spriteProg.aColor, 4, GLES20.GL_FLOAT, false, 24, 8);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, verts);
         GLES20.glDisableVertexAttribArray(spriteProg.aColor);
+        GLES20.glDisableVertexAttribArray(spriteProg.aPos);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
-        GLES20.glDeleteBuffers(1, tmpIds, 0);
     }
 
     // ---------------------------------------------------------------- world
@@ -568,8 +585,7 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
 
         if (verts > 0) {
             b.flip();
-            GLES20.glGenBuffers(1, tmpIds, 0);
-            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, tmpIds[0]);
+            GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, dynVbo);
             GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, verts * 16, b, GLES20.GL_DYNAMIC_DRAW);
             GLES20.glEnableVertexAttribArray(fontProg.aPos);
             GLES20.glVertexAttribPointer(fontProg.aPos, 2, GLES20.GL_FLOAT, false, 16, 0);
@@ -577,8 +593,8 @@ public final class GameRenderer implements GLSurfaceView.Renderer {
             GLES20.glVertexAttribPointer(fontProg.aUV, 2, GLES20.GL_FLOAT, false, 16, 8);
             GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, verts);
             GLES20.glDisableVertexAttribArray(fontProg.aUV);
+            GLES20.glDisableVertexAttribArray(fontProg.aPos);
             GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
-            GLES20.glDeleteBuffers(1, tmpIds, 0);
         }
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
     }

@@ -5,8 +5,9 @@ import android.opengl.GLSurfaceView;
 import android.view.MotionEvent;
 
 /**
- * The GL surface. RGB565 + 16-bit depth keeps the framebuffer small and fast;
- * the EGL context is preserved across pauses for instant resumes.
+ * The GL surface. RGB888 + 16-bit depth works on every GLES 2.0 device
+ * (manual RGB565 configs render blank on a few drivers); the EGL context is
+ * preserved across pauses for instant resumes.
  */
 public final class GameView extends GLSurfaceView {
 
@@ -16,7 +17,7 @@ public final class GameView extends GLSurfaceView {
         super(ctx);
         this.renderer = renderer;
         setEGLContextClientVersion(2);
-        setEGLConfigChooser(5, 6, 5, 0, 16, 0);   // RGB565, 16-bit depth, no stencil
+        setEGLConfigChooser(8, 8, 8, 0, 16, 0);   // RGB888, 16-bit depth, no stencil
         setPreserveEGLContextOnPause(true);
         setRenderer(renderer);
         setRenderMode(RENDERMODE_CONTINUOUSLY);

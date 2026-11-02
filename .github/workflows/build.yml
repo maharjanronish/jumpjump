@@ -26,16 +26,10 @@ jobs:
         run: |
           yes | sdkmanager "build-tools;35.0.0" > /dev/null || true
 
-      - name: Cache signing keystore
-        uses: actions/cache@v4
-        with:
-          path: ~/.jumpjump
-          key: jumpjump-signing-keystore-v1
-
       - name: Build signed APK
         run: |
           chmod +x scripts/build_apk.sh
-          JUMP_KEYSTORE=~/.jumpjump/signing.keystore scripts/build_apk.sh
+          scripts/build_apk.sh
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

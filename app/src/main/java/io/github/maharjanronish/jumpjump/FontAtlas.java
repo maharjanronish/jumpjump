@@ -104,7 +104,7 @@ public final class FontAtlas {
             int idx = GLYPHS.indexOf(s.charAt(i));
             if (idx < 0) continue;
             float wPx = widths[idx];
-            float x0 = x, x1 = x + 2f * wPx / viewW;
+            float x0 = x, x1 = x + 2f * wPx * wScale / viewW;
             float y0 = cyNdc - hNdc * 0.5f, y1 = cyNdc + hNdc * 0.5f;
             float u0 = uvs[idx * 4], v0 = uvs[idx * 4 + 1];
             float u1 = uvs[idx * 4 + 2], v1 = uvs[idx * 4 + 3];

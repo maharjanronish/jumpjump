@@ -36,6 +36,7 @@ public final class Meshes {
 
         /** Binds the VBO to the given attribute locations and draws. */
         public void draw(int aPos, int aNormal) {
+            if (vbo <= 0) upload();   // safety: never draw with a missing VBO
             GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo);
             GLES20.glEnableVertexAttribArray(aPos);
             GLES20.glVertexAttribPointer(aPos, 3, GLES20.GL_FLOAT, false, 24, 0);
@@ -71,6 +72,7 @@ public final class Meshes {
         }
 
         public void draw(int aPos) {
+            if (vbo <= 0) upload();   // safety: never draw with a missing VBO
             GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo);
             GLES20.glEnableVertexAttribArray(aPos);
             GLES20.glVertexAttribPointer(aPos, 3, GLES20.GL_FLOAT, false, 12, 0);

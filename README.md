@@ -40,16 +40,30 @@ No online anything: no accounts, no ads, no tracking, **no permissions**.
 
 - **APK: ~64 KB** (the original WeChat mini-game was ~4 MB; typical Unity clone ≥ 30 MB)
 - **RAM: ~25–35 MB** PSS (GL context + ~400 KB of synthesized audio)
-- **~25 draw calls / < 10k triangles per frame**, RGB565 framebuffer, 60 fps on 2015-era hardware
+- **~25 draw calls / < 10k triangles per frame**, RGB888 framebuffer, 60 fps on 2015-era hardware
 - Render loop pauses automatically on the game-over screen (battery friendly)
 - All geometry is procedural (cube/cylinder/sphere), all audio is synthesized
   PCM, the font is rendered at runtime — **zero asset files**
 
+## Changelog
+
+**1.1.0** — fixed the blank/white gameplay screen some devices showed (sounds
+played and the game-over card appeared, but no world rendered): every mesh
+was created but never uploaded to the GPU, so all block/piece geometry drew
+nothing. Meshes now upload at surface creation (with a lazy-upload guard),
+the EGL config is RGB888 for maximum driver compatibility, screen-space
+quads use one persistent dynamic VBO, and multi-digit score text is no longer
+squished. CI now signs with the committed keystore so every build updates
+in place.
+
+**1.0.0** — initial release.
+
 ## Install
 
-Grab `JumpJump.apk` from [Actions artifacts](../../actions) (or build below) and
-sideload it. It is signed, so it installs directly — enable "install unknown
-apps" when Android asks.
+Grab `JumpJump.apk` from [Releases](../../releases) or
+[Actions artifacts](../../actions) (or build below) and sideload it. It is
+signed, so it installs directly — enable "install unknown apps" when Android
+asks.
 
 ## Build
 
@@ -62,8 +76,8 @@ ANDROID_HOME=/path/to/sdk JAVA_HOME=/path/to/jdk scripts/build_apk.sh
 ```
 
 Requires any SDK with build-tools ≥ 34 and a JDK 17+. Produces a signed
-`JumpJump.apk`. A signing keystore is generated on first run (password
-`jumpjump` — replace it for anything serious).
+`JumpJump.apk`. The committed `signing.keystore` keeps every build's
+signature identical (password `jumpjump` — replace it for anything serious).
 
 **2. Android Studio:** open the project and press Run. (Gradle + AGP 7.4.2,
 no dependencies to download beyond the plugin itself.)

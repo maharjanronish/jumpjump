@@ -6,10 +6,10 @@ out/
 *.ap_
 *.dex
 
-# signing (never commit keystores)
-signing.keystore
+# signing - the project keystore IS committed on purpose so local and CI
+# builds share one signature (in-place updates work). Replace it (and remove
+# from git) before doing anything serious with this app.
 *.jks
-*.keystore
 
 # IDE / gradle
 .gradle/
