@@ -1,0 +1,20 @@
+# build outputs
+build/
+app/build/
+out/
+*.apk
+*.ap_
+*.dex
+
+# signing (never commit keystores)
+signing.keystore
+*.jks
+*.keystore
+
+# IDE / gradle
+.gradle/
+local.properties
+.idea/
+*.iml
+.DS_Store
+*.idsig

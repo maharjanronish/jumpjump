@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <FrameLayout
+        android:id="@+id/gl_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:id="@+id/hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="64dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/hint_pill"
+        android:text="@string/hint"
+        android:textColor="@color/ink"
+        android:textSize="14sp"
+        android:alpha="0.92"
+        android:visibility="gone" />
+
+    <!-- Game over card -->
+    <LinearLayout
+        android:id="@+id/game_over_panel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:minWidth="300dp"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingLeft="32dp"
+        android:paddingRight="32dp"
+        android:paddingTop="34dp"
+        android:paddingBottom="24dp"
+        android:background="@drawable/card"
+        android:elevation="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/final_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/ink"
+            android:textSize="64sp"
+            android:textStyle="bold"
+            android:text="0" />
+
+        <TextView
+            android:id="@+id/best_score"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/ink_soft"
+            android:textSize="14sp"
+            android:letterSpacing="0.12"
+            android:textAllCaps="true"
+            android:text="@string/best_label" />
+
+        <TextView
+            android:id="@+id/new_best"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:background="@drawable/badge"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:textAllCaps="true"
+            android:text="@string/new_best"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/play_again"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="26dp"
+            android:background="@drawable/btn_primary"
+            android:stateListAnimator="@null"
+            android:text="@string/play_again"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/records_button"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_ghost"
+                android:stateListAnimator="@null"
+                android:text="@string/records"
+                android:textColor="@color/ink_soft"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/sound_toggle"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/btn_ghost"
+                android:stateListAnimator="@null"
+                android:text="@string/sound_label"
+                android:textColor="@color/ink_soft"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Offline leaderboard -->
+    <LinearLayout
+        android:id="@+id/records_panel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:minWidth="300dp"
+        android:orientation="vertical"
+        android:paddingLeft="28dp"
+        android:paddingRight="28dp"
+        android:paddingTop="26dp"
+        android:paddingBottom="20dp"
+        android:background="@drawable/card"
+        android:elevation="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/records_title"
+            android:textColor="@color/ink"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:maxHeight="320dp">
+
+            <LinearLayout
+                android:id="@+id/records_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </ScrollView>
+
+        <Button
+            android:id="@+id/records_back"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/btn_ghost"
+            android:stateListAnimator="@null"
+            android:text="@string/back"
+            android:textColor="@color/ink_soft"
+            android:textSize="14sp" />
+    </LinearLayout>
+</FrameLayout>

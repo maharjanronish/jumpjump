@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jump Jump</string>
+    <string name="hint">Hold to charge · Release to jump</string>
+    <string name="best_label">Best %1$d</string>
+    <string name="new_best">New best!</string>
+    <string name="play_again">Play Again</string>
+    <string name="records">Records</string>
+    <string name="records_title">Local Records</string>
+    <string name="no_records">No games yet — start jumping!</string>
+    <string name="back">Back</string>
+    <string name="sound_label">Sound: %1$s</string>
+    <string name="sound_on">On</string>
+    <string name="sound_off">Off</string>
+</resources>
